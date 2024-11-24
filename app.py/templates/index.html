@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Simulator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        input, button {
+            margin: 5px;
+            padding: 10px;
+            font-size: 16px;
+        }
+        button {
+            cursor: pointer;
+        }
+        .market, .inventory, .balance {
+            margin: 20px 0;
+        }
+    </style>
+    <script>
+        async function refreshMarket() {
+            const response = await fetch("/api/refresh", { method: "POST" });
+            const result = await response.json();
+            loadMarket();
+            alert(result.success);
+        }
+
+        async function loadMarket() {
+            const response = await fetch("/api/market");
+            const prices = await response.json();
+            const marketDiv = document.getElementById("market");
+            marketDiv.innerHTML = `
+                <h3>Market Prices</h3>
+                ${Object.entries(prices).map(([item, price]) => `<p>${item}: $${price}</p>`).join("")}
+            `;
+        }
+
+        async function loadPlayerData() {
+            const response = await fetch("/api/player");
+            const data = await response.json();
+            document.getElementById("balance").textContent = `Balance: $${data.balance}`;
+            document.getElementById("inventory").innerHTML = `
+                <h3>Inventory</h3>
+                ${Object.entries(data.inventory).map(([item, qty]) => `<p>${item}: ${qty}</p>`).join("")}
+            `;
+        }
+
+        async function trade(action) {
+            const item = document.getElementById("item").value;
+            const quantity = parseInt(document.getElementById("quantity").value);
+            const endpoint = action === "buy" ? "/api/buy" : "/api/sell";
+
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ item, quantity }),
+            });
+            const result = await response.json();
+            if (result.error) {
+                alert(result.error);
+            } else {
+                alert(result.success);
+                loadMarket();
+                loadPlayerData();
+            }
+        }
+
+        async function init() {
+            loadMarket();
+            loadPlayerData();
+        }
+
+        window.onload = init;
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Trading Simulator</h1>
+        <div id="market" class="market"></div>
+        <div id="balance" class="balance"></div>
+        <div id="inventory" class="inventory"></div>
+        <hr>
+        <input type="text" id="item" placeholder="Item (Gold/Silver/Platinum)">
+        <input type="number" id="quantity" placeholder="Quantity">
+        <button onclick="trade('buy')">Buy</button>
+        <button onclick="trade('sell')">Sell</button>
+        <button onclick="refreshMarket()">Refresh Market</button>
+    </div>
+</body>
+</html>
